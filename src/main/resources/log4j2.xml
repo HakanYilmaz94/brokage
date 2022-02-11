@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Configuration monitorInterval="60">
+	<Appenders>
+		<Console name="Console-Appender" target="SYSTEM_OUT">
+			<PatternLayout>
+				<pattern>
+					[%d{dd-MM-yyyy HH:mm:ss.SSS}] [%-5level] -%marker- %logger{36} - %M - %X{traceId} - %X{spanId} -  %msg%n
+				</pattern>
+			</PatternLayout>
+		</Console>
+		<File name="Main-File-Appender" fileName="applog_brokage.log">
+			<PatternLayout>
+				<pattern>
+					[%d{dd-MM-yyyy HH:mm:ss.SSS}] [%-5level] -%marker- %logger{36} - %M - %X{traceId} - %X{spanId} - %msg%n
+				</pattern>
+			</PatternLayout>
+		</File>
+	</Appenders>
+	<Loggers>
+		<Root level="INFO">
+			<AppenderRef ref="Console-Appender"/>
+			<AppenderRef ref="Main-File-Appender"/>
+		</Root>
+	</Loggers>
+</Configuration>
