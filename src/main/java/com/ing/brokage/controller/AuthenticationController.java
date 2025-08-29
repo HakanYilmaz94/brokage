@@ -7,8 +7,11 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import static com.ing.brokage.constant.UrlConstants.AUTH;
+import static com.ing.brokage.constant.UrlConstants.TOKEN;
+
 @RestController
-@RequestMapping(path = "/getToken")
+@RequestMapping(path = AUTH)
 @CrossOrigin
 public class AuthenticationController {
 
@@ -20,7 +23,7 @@ public class AuthenticationController {
         this.authenticationServiceImpl = authenticationServiceImpl;
     }
 
-    @PostMapping
+    @PostMapping(TOKEN)
     public ResponseEntity<TokenResponse> generateToken(@RequestBody TokenRequest tokenRequest) throws Exception {
         String token = authenticationServiceImpl.authenticate(tokenRequest);
         return ResponseEntity.ok(new TokenResponse(token));

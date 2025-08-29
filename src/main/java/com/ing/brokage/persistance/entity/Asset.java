@@ -30,4 +30,8 @@ public class Asset extends BaseEntity {
 
     @Column(nullable = false)
     private Long usableSize;
+
+    @Version
+    @Column(nullable = false)
+    private Long version;
 }

@@ -31,4 +31,6 @@ public class CreateOrderRequest {
     @NotNull(message = NOT_NULL_MSG)
     @Positive(message = POSITIVE_ALLOWED_MSG)
     private Long size;
+
+    private Long customerId;
 }

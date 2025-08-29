@@ -1,9 +1,7 @@
 package com.ing.brokage.persistance.entity;
 
-import jakarta.persistence.Column;
-import jakarta.persistence.Entity;
-import jakarta.persistence.SequenceGenerator;
-import jakarta.persistence.Table;
+import com.ing.brokage.persistance.enums.UserRoleEnum;
+import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
@@ -26,19 +24,24 @@ import java.util.List;
 @SequenceGenerator(name = "idgen", sequenceName = "CUSTOMER_SEQ", allocationSize = 1)
 public class Customer extends BaseEntity implements UserDetails {
 
+    @Column(nullable = false, length = 50)
 	String name;
 
+    @Column(nullable = false, length = 50)
 	String surname;
 
-	@Column(unique = true)
+	@Column(nullable = false, unique = true, length = 100)
 	String email;
 
+    @Column(nullable = false, length = 50)
 	String username;
 
+    @Column(nullable = false, length = 50)
 	String password;
 
 	@Column(nullable = false, length = 20)
-	private String role;
+    @Enumerated(EnumType.STRING)
+	private UserRoleEnum role;
 
 	@Override
 	public Collection<? extends GrantedAuthority> getAuthorities() {

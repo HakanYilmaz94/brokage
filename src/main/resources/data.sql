@@ -1,7 +1,7 @@
 INSERT INTO CUSTOMER (id, status, created_by, created_At, updated_by, updated_At, name, surname, email, username, password, role) VALUES
   (CUSTOMER_SEQ.nextval, 'ACTIVE', 'SYSTEM', CURRENT_TIMESTAMP, 'SYSTEM', CURRENT_TIMESTAMP, 'Hakan', 'Yılmaz', 'hkn94@windowslive.com', 'HY',  'password', 'USER');
 
-INSERT INTO ASSET (id, customer_id, asset_name, size, usable_size, status, created_by, created_at, updated_by, updated_at)
+INSERT INTO ASSET (id, customer_id, asset_name, size, usable_size, status, created_by, created_at, updated_by, updated_at,version)
 VALUES (
            ASSET_SEQ.nextval,
            (SELECT id FROM CUSTOMER WHERE username = 'HY'),
@@ -12,7 +12,8 @@ VALUES (
            'SYSTEM',
            CURRENT_TIMESTAMP,
            'SYSTEM',
-           CURRENT_TIMESTAMP
+           CURRENT_TIMESTAMP,
+           0
        );
 
 INSERT INTO CUSTOMER (id, status, created_by, created_At, updated_by, updated_At, name, surname, email, username, password, role) VALUES
@@ -20,7 +21,7 @@ INSERT INTO CUSTOMER (id, status, created_by, created_At, updated_by, updated_At
 
 INSERT INTO CUSTOMER (id, status, created_by, created_At, updated_by, updated_At, name, surname, email, username, password, role) VALUES
     (CUSTOMER_SEQ.nextval, 'ACTIVE', 'SYSTEM', CURRENT_TIMESTAMP, 'SYSTEM', CURRENT_TIMESTAMP, 'Hakan2', 'Yılmaz2', 'hkn95@windowslive.com', 'HY2',  'password2', 'USER');
-INSERT INTO ASSET (id, customer_id, asset_name, size, usable_size, status, created_by, created_at, updated_by, updated_at)
+INSERT INTO ASSET (id, customer_id, asset_name, size, usable_size, status, created_by, created_at, updated_by, updated_at, version)
 VALUES (
            ASSET_SEQ.nextval,
            (SELECT id FROM CUSTOMER WHERE username = 'HY2'),
@@ -31,5 +32,6 @@ VALUES (
            'SYSTEM',
            CURRENT_TIMESTAMP,
            'SYSTEM',
-           CURRENT_TIMESTAMP
+           CURRENT_TIMESTAMP,
+           0
        );

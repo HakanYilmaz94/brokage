@@ -2,10 +2,13 @@ package com.ing.brokage.service.impl;
 
 import com.ing.brokage.constant.ExceptionConstants;
 import com.ing.brokage.exception.CustomException;
+import com.ing.brokage.modal.dto.AssetDto;
 import com.ing.brokage.persistance.entity.Asset;
 import com.ing.brokage.persistance.repository.AssetRepository;
 import com.ing.brokage.service.AssetService;
 import lombok.RequiredArgsConstructor;
+import org.modelmapper.ModelMapper;
+import org.modelmapper.TypeToken;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -15,6 +18,7 @@ import java.util.List;
 public class AssetServiceImpl implements AssetService {
 
     private final AssetRepository assetRepository;
+    private final ModelMapper modelMapper;
 
     @Override
     public Asset getAssetByCustomerAndName(Long customerId, String assetName) {
@@ -28,7 +32,7 @@ public class AssetServiceImpl implements AssetService {
     }
 
     @Override
-    public List<Asset> listAssetsByCustomer(Long customerId) {
-        return assetRepository.findAllByCustomerId(customerId);
+    public List<AssetDto> listAssetsByCustomer(Long customerId) {
+        return modelMapper.map(assetRepository.findAllByCustomerId(customerId), new TypeToken<List<AssetDto>>() {}.getType());
     }
 }

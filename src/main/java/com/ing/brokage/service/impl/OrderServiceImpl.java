@@ -14,16 +14,21 @@ import com.ing.brokage.persistance.repository.OrderRepository;
 import com.ing.brokage.service.AssetService;
 import com.ing.brokage.service.CustomerService;
 import com.ing.brokage.service.OrderService;
+import jakarta.persistence.OptimisticLockException;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.modelmapper.ModelMapper;
 import org.modelmapper.TypeToken;
+import org.springframework.retry.annotation.Backoff;
+import org.springframework.retry.annotation.Retryable;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class OrderServiceImpl implements OrderService {
@@ -38,44 +43,63 @@ public class OrderServiceImpl implements OrderService {
 
     @Override
     @Transactional
+    @Retryable(
+            retryFor = OptimisticLockException.class,
+            maxAttempts = 3,
+            backoff = @Backoff(delay = 100, multiplier = 2)
+    )
     public void createOrder(CreateOrderRequest request, long customerId) {
-        Customer customer = customerService.getCustomer(customerId);
-
-        if (request.getSide() == SideEnum.BUY) {
-            handleBuyOrder(request, customer);
-        } else {
-            handleSellOrder(request, customer);
+        try {
+            Customer customer = customerService.getCustomer(customerId);
+            if (request.getSide() == SideEnum.BUY) {
+                handleBuyOrder(request, customer);
+            } else {
+                handleSellOrder(request, customer);
+            }
+        } catch (OptimisticLockException e) {
+            log.warn("Optimistic lock exception for customerId={}", customerId, e);
+            createOrder(request, customerId);
         }
     }
 
     @Override
     @Transactional
+    @Retryable(
+            retryFor = OptimisticLockException.class,
+            maxAttempts = 3,
+            backoff = @Backoff(delay = 100, multiplier = 2)
+    )
     public void cancelOrder(Long orderId, long customerId) {
-        Order order = orderRepository.findById(orderId)
-                .orElseThrow(() -> new CustomException(ExceptionConstants.ORDER_NOT_FOUND_ERROR_MSG, ExceptionConstants.ORDER_NOT_FOUND_ERROR_CODE));
+        try {
+            Order order = orderRepository.findById(orderId)
+                    .orElseThrow(() -> new CustomException(ExceptionConstants.ORDER_NOT_FOUND_ERROR_MSG, ExceptionConstants.ORDER_NOT_FOUND_ERROR_CODE));
 
-        if (order.getOrderStatus() != OrderStatus.PENDING) {
-            throw new CustomException(ExceptionConstants.ONLY_PENDING_ORDERS_CANCELED_MSG, ExceptionConstants.ONLY_PENDING_ORDERS_CANCELED_CODE);
+            if (order.getOrderStatus() != OrderStatus.PENDING) {
+                throw new CustomException(ExceptionConstants.ONLY_PENDING_ORDERS_CANCELED_MSG, ExceptionConstants.ONLY_PENDING_ORDERS_CANCELED_CODE);
+            }
+
+            Customer customer = order.getCustomer();
+
+            Asset tryAsset = assetService.getAssetByCustomerAndName(customer.getId(), TRY_ASSET_NAME);
+            BigDecimal totalPrice = order.getPrice().multiply(BigDecimal.valueOf(order.getSize()));
+            if (order.getSide() == SideEnum.BUY) {
+                tryAsset.setUsableSize(tryAsset.getUsableSize() + totalPrice.longValue());
+                assetService.save(tryAsset);
+            } else {
+                tryAsset.setUsableSize(tryAsset.getUsableSize() - totalPrice.longValue());
+                assetService.save(tryAsset);
+
+                Asset soldAsset = order.getAsset();
+                soldAsset.setUsableSize(soldAsset.getUsableSize() + order.getSize());
+                assetService.save(soldAsset);
+            }
+
+            order.setOrderStatus(OrderStatus.CANCELED);
+            orderRepository.save(order);
+        } catch (OptimisticLockException e) {
+            log.warn("Optimistic lock exception for customerId={}", customerId, e);
+            cancelOrder(orderId, customerId);
         }
-
-        Customer customer = order.getCustomer();
-
-        Asset tryAsset = assetService.getAssetByCustomerAndName(customer.getId(), TRY_ASSET_NAME);
-        BigDecimal totalPrice = order.getPrice().multiply(BigDecimal.valueOf(order.getSize()));
-        if (order.getSide() == SideEnum.BUY) {
-            tryAsset.setUsableSize(tryAsset.getUsableSize() + totalPrice.longValue());
-            assetService.save(tryAsset);
-        } else {
-            tryAsset.setUsableSize(tryAsset.getUsableSize() - totalPrice.longValue());
-            assetService.save(tryAsset);
-
-            Asset soldAsset = order.getAsset();
-            soldAsset.setUsableSize(soldAsset.getUsableSize() + order.getSize());
-            assetService.save(soldAsset);
-        }
-
-        order.setOrderStatus(OrderStatus.CANCELED);
-        orderRepository.save(order);
     }
 
 
@@ -86,22 +110,32 @@ public class OrderServiceImpl implements OrderService {
 
     @Override
     @Transactional
+    @Retryable(
+            retryFor = OptimisticLockException.class,
+            maxAttempts = 3,
+            backoff = @Backoff(delay = 100, multiplier = 2)
+    )
     public void matchOrder(Long orderId) {
-        Order order = orderRepository.findById(orderId)
-                .orElseThrow(() -> new CustomException(ExceptionConstants.ORDER_NOT_FOUND_ERROR_MSG, ExceptionConstants.ORDER_NOT_FOUND_ERROR_CODE));
+        try {
+            Order order = orderRepository.findById(orderId)
+                    .orElseThrow(() -> new CustomException(ExceptionConstants.ORDER_NOT_FOUND_ERROR_MSG, ExceptionConstants.ORDER_NOT_FOUND_ERROR_CODE));
 
-        if (order.getOrderStatus() != OrderStatus.PENDING) {
-            throw new CustomException(ExceptionConstants.ONLY_PENDING_ORDERS_MATCHED_MSG, ExceptionConstants.ONLY_PENDING_ORDERS_MATCHED_CODE);
+            if (order.getOrderStatus() != OrderStatus.PENDING) {
+                throw new CustomException(ExceptionConstants.ONLY_PENDING_ORDERS_MATCHED_MSG, ExceptionConstants.ONLY_PENDING_ORDERS_MATCHED_CODE);
+            }
+
+            if (order.getSide() == SideEnum.BUY) {
+                handleBuyMatch(order);
+            } else {
+                handleSellMatch(order);
+            }
+
+            order.setOrderStatus(OrderStatus.MATCHED);
+            orderRepository.save(order);
+        } catch (OptimisticLockException e) {
+            log.warn("Optimistic lock exception for orderId={}", orderId, e);
+            matchOrder(orderId);
         }
-
-        if (order.getSide() == SideEnum.BUY) {
-            handleBuyMatch(order);
-        } else {
-            handleSellMatch(order);
-        }
-
-        order.setOrderStatus(OrderStatus.MATCHED);
-        orderRepository.save(order);
     }
 
     private void handleBuyMatch(Order order) {

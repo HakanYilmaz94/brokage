@@ -54,7 +54,7 @@ docker run -p 8080:8080 brokerage-service
 
 The service uses JWT tokens for authentication.
 
-Obtain a token by calling the /brokage/getToken endpoint with valid credentials.
+Obtain a token by calling the /brokage/auth/token endpoint with valid credentials.
 
 Include the token in request headers:
 
